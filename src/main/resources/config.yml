@@ -1,0 +1,19 @@
+settings:
+
+  #Русский:
+  # Время, которое нужно будет ждать чем повторно др##ить.
+  #English:
+  # The time it would take to wait than to re-j##k off.
+
+  cooldown: 90
+
+
+messages:
+  only-players: "&cТолько для игроков."
+  already: "&cВы уже фапаете."
+  cooldown: "&cВы устали. Отдохните прежде чем сделать это снова."
+  bossbar-title: "Фап-Фап"
+  started: "&eВы начали фапать."
+  success: "&eВы кончили! Вы управились за %s секунд."
+  reload: "&eКонфиг перезагружен."
+  disturbed: "&eВас потревожили! Найдите место поукромнее."

@@ -1,0 +1,21 @@
+name: FapPlugin
+version: '${project.version}'
+main: ru.hastg9.fapplugin.FapPlugin
+api-version: 1.13
+author: HastG9
+website: https://github.com/HastG99
+
+commands:
+  fap:
+    permission: fap.use
+
+permissions:
+  fap.use:
+    default: true
+    description: Is needed to use /fap.
+  fap.bypass:
+    description: Bypass cooldown.
+    default: op
+  fap.reload:
+    description: Is needed to use /fap reload.
+    default: op
