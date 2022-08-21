@@ -28,6 +28,7 @@ public class PlayerListener implements Listener {
             return;
 
         Player player = event.getPlayer();
+        World world = player.getWorld();
 
         if(!FapManager.hasFapper(player))
             return;
@@ -41,7 +42,7 @@ public class PlayerListener implements Listener {
 
         BossBar bossBar = FapManager.getBossbar(player);
 
-        player.playSound(player.getLocation(), Sound.ENTITY_SLIME_JUMP, 1, 2);
+        world.playSound(player.getLocation(), Sound.ENTITY_SLIME_JUMP, 2, 2);
 
         if(count <= 35)
             bossBar.setProgress(count / 35.0);
@@ -55,7 +56,7 @@ public class PlayerListener implements Listener {
 
                 Bukkit.getScheduler().runTaskAsynchronously(FapPlugin.getInstance(), () -> {
                     for (int i = 0; i < 3; i++) {
-                        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_SWIM, 1, 2);
+                        world.playSound(player.getLocation(), Sound.ENTITY_PLAYER_SWIM, 5, 2);
 
                         player.spawnParticle(Particle.SPIT, player.getEyeLocation(), 10, 0, 1, 0);
 
