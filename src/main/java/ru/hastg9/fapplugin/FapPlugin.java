@@ -9,6 +9,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import ru.hastg9.fapplugin.commands.FapCommand;
+import ru.hastg9.fapplugin.commands.PipCommand;
 import ru.hastg9.fapplugin.listeners.PlayerListener;
 import ru.hastg9.fapplugin.managers.FapManager;
 
@@ -30,6 +31,7 @@ public final class FapPlugin extends JavaPlugin implements Listener {
 
     private void registerCommands() {
         getCommand("fap").setExecutor(new FapCommand());
+        getCommand("pip").setExecutor(new PipCommand());
     }
 
     private void registerListeners() {

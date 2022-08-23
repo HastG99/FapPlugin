@@ -8,6 +8,9 @@ website: https://github.com/HastG99
 commands:
   fap:
     permission: fap.use
+  pip:
+    permission: fap.pip
+    aliases: [penis]
 
 permissions:
   fap.use:
@@ -19,3 +22,6 @@ permissions:
   fap.reload:
     description: Is needed to use /fap reload.
     default: op
+  fap.pip:
+    description: Is needed to use /pip.
+    default: true

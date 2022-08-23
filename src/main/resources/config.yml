@@ -19,3 +19,26 @@ messages:
   disturbed: "&eВас потревожили! Найдите место поукромнее."
   hit-success: "&eОтлично! Прямо в %s."
   were-hit: "&eВ вас попали камшотом!"
+
+  pip:
+    size:
+      smallest: 5
+      small: 10
+      medium: 17
+      big: 22
+      biggest: 28
+
+    title:
+      fadein: 1
+      stay: 100
+      fadeout: 10
+
+      smallest: "&c8=D"
+      small: "&68==D"
+      medium: "&e8===D"
+      big: "&a8=====D"
+      biggest: "&a8========D"
+
+      subtitle: "&e%d&f см"
+
+
