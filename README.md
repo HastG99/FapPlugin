@@ -9,4 +9,5 @@ Does he need an explanation? <br/>
 |:-------------:|:------------------------:|:------------:|
 |    `/fap`     | Main Command (J#rk-0ff). |  `fap.use`   |
 | `/fap reload` |      Reload config.      | `fap.reload` |
+|    `/pip`     |        Hose size.        |  `fap.pip`   |
 |               |   Bypass fap cooldown.   | `fap.bypass` |
