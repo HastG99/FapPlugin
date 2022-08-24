@@ -28,8 +28,7 @@ public class PlayerListener implements Listener {
     @EventHandler
     public void onClick(PlayerInteractEvent event) {
         if(event.getAction() != Action.LEFT_CLICK_AIR &&
-                event.getAction() != Action.LEFT_CLICK_BLOCK)
-            return;
+                event.getAction() != Action.LEFT_CLICK_BLOCK) return;
 
         Player player = event.getPlayer();
         World world = player.getWorld();
@@ -44,9 +43,11 @@ public class PlayerListener implements Listener {
 
         event.setCancelled(true);
 
+        if(event.getAction() == Action.LEFT_CLICK_BLOCK) return;
+
         BossBar bossBar = FapManager.getBossbar(player);
 
-        world.playSound(player.getLocation(), Sound.ENTITY_SLIME_JUMP, 2, 2);
+        world.playSound(player.getLocation(), getSound("recharging"), 2, 2);
 
         if(count <= 35)
             bossBar.setProgress(count / 35.0);
@@ -61,7 +62,7 @@ public class PlayerListener implements Listener {
 
                 Bukkit.getScheduler().runTaskAsynchronously(FapPlugin.getInstance(), () -> {
                     for (int i = 0; i < 3; i++) {
-                        world.playSound(player.getLocation(), Sound.ENTITY_PLAYER_SWIM, 5, 2);
+                        world.playSound(player.getLocation(), getSound("shoot"), 5, 2);
 
                         Location location = player.getLocation().toVector().add(player.getLocation().getDirection().multiply(0.8D)).
                                 toLocation(player.getWorld()).add(0.0D, 1.0D, 0.0D);
@@ -85,6 +86,7 @@ public class PlayerListener implements Listener {
 
                 player.sendMessage(String.format(FapPlugin.getMessage("messages.success"), StringUtils.formatDouble(time / 1000.0)));
 
+                FapPlugin.getLeaderBoard().update(player, (int) time);
                 FapManager.updateCooldown(player.getName());
             }
 
@@ -92,6 +94,11 @@ public class PlayerListener implements Listener {
         }
 
         FapManager.setFapper(player, ++count);
+    }
+
+
+    private Sound getSound(String name) {
+        return Sound.valueOf(FapPlugin.getInstance().getConfig().getString("settings.sounds." + name));
     }
 
 

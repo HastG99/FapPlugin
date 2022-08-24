@@ -22,6 +22,9 @@ permissions:
   fap.reload:
     description: Is needed to use /fap reload.
     default: op
+  fap.top:
+    default: true
+    description: Is needed to use /fap top.
   fap.pip:
     description: Is needed to use /pip.
     default: true

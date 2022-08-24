@@ -7,6 +7,10 @@ settings:
 
   cooldown: 90
 
+  sounds:
+    shoot: "ENTITY_PLAYER_SWIM"
+    recharging: "ENTITY_SLIME_JUMP"
+
 
 messages:
   only-players: "&cТолько для игроков."
@@ -19,6 +23,14 @@ messages:
   disturbed: "&eВас потревожили! Найдите место поукромнее."
   hit-success: "&eОтлично! Прямо в %s."
   were-hit: "&eВ вас попали камшотом!"
+  no-perm: "&cНет прав!"
+
+  leaderboard:
+    header: "&7Топ &f10 &7по скорости."
+    entry: "&e%d. &f%s - &e%s &fсек."
+    no-data: "&fНет данных."
+
+  personal-record: "&fЛичный рекорд: &e%s сек."
 
   pip:
     size:

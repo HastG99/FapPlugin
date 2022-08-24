@@ -10,12 +10,17 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import ru.hastg9.fapplugin.commands.FapCommand;
 import ru.hastg9.fapplugin.commands.PipCommand;
+import ru.hastg9.fapplugin.leaderboard.LeaderBoard;
 import ru.hastg9.fapplugin.listeners.PlayerListener;
 import ru.hastg9.fapplugin.managers.FapManager;
+
+import java.util.logging.Logger;
 
 public final class FapPlugin extends JavaPlugin implements Listener {
 
     private static FapPlugin instance;
+    private static LeaderBoard leaderBoard;
+    public static final Logger LOGGER = Logger.getLogger(FapPlugin.class.getSimpleName());
 
     @Override
     public void onEnable() {
@@ -26,7 +31,15 @@ public final class FapPlugin extends JavaPlugin implements Listener {
         registerCommands();
         registerListeners();
 
+        leaderBoard = new LeaderBoard("data");
+        leaderBoard.load();
+
         scheduleTasks();
+    }
+
+    @Override
+    public void onDisable() {
+        leaderBoard.save();
     }
 
     private void registerCommands() {
@@ -44,6 +57,9 @@ public final class FapPlugin extends JavaPlugin implements Listener {
                 player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 200, 4));
 
         }, 100L, 100L);
+
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> leaderBoard.save(), 100L, 800L);
+
     }
 
     public static String getMessage(String path) {
@@ -58,4 +74,7 @@ public final class FapPlugin extends JavaPlugin implements Listener {
         return instance.getConfig();
     }
 
+    public static LeaderBoard getLeaderBoard() {
+        return leaderBoard;
+    }
 }
