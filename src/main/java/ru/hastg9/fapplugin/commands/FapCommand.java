@@ -80,7 +80,7 @@ public class FapCommand implements CommandExecutor {
         FapManager.addFapper(player, bossBar);
 
         player.sendMessage(FapPlugin.getMessage("messages.started"));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 200, 4));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 200, 4));
         return true;
     }
 

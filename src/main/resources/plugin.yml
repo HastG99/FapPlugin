@@ -1,7 +1,7 @@
 name: FapPlugin
 version: '${project.version}'
 main: ru.hastg9.fapplugin.FapPlugin
-api-version: 1.13
+api-version: 1.21
 author: HastG9
 website: https://github.com/HastG99
 

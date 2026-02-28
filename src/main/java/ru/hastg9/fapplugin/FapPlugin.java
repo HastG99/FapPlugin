@@ -20,12 +20,12 @@ public final class FapPlugin extends JavaPlugin implements Listener {
 
     private static FapPlugin instance;
     private static LeaderBoard leaderBoard;
+
     public static final Logger LOGGER = Logger.getLogger(FapPlugin.class.getSimpleName());
 
     @Override
     public void onEnable() {
         instance = this;
-
         saveDefaultConfig();
 
         registerCommands();
@@ -39,12 +39,19 @@ public final class FapPlugin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (FapManager.hasFapper(p)) {
+                p.removePotionEffect(PotionEffectType.SLOWNESS);
+                FapManager.removeBossbar(p);
+                FapManager.removeFapper(p);
+            }
+        }
         leaderBoard.save();
     }
 
     private void registerCommands() {
-        getCommand("fap").setExecutor(new FapCommand());
-        getCommand("pip").setExecutor(new PipCommand());
+        if (getCommand("fap") != null) getCommand("fap").setExecutor(new FapCommand());
+        if (getCommand("pip") != null) getCommand("pip").setExecutor(new PipCommand());
     }
 
     private void registerListeners() {
@@ -53,13 +60,13 @@ public final class FapPlugin extends JavaPlugin implements Listener {
 
     private void scheduleTasks() {
         Bukkit.getScheduler().runTaskTimer(this, () -> {
-            for (Player player : FapManager.getFappers().keySet())
-                player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 200, 4));
-
+            for (Player player : FapManager.getFappers().keySet()) {
+                if (player == null || !player.isOnline()) continue;
+                if (FapManager.getCount(player) == -1) continue; // уже "финиширует" — не обязательно, но чище
+                player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 200, 4));
+            }
         }, 100L, 100L);
-
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> leaderBoard.save(), 100L, 800L);
-
     }
 
     public static String getMessage(String path) {

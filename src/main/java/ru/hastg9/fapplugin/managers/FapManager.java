@@ -14,7 +14,6 @@ public class FapManager {
     private static final Map<Player, Long> times = new ConcurrentHashMap<>();
     private static final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
 
-
     public static void addFapper(Player player, BossBar bossBar) {
         bossbars.put(player, bossBar);
         times.put(player, System.currentTimeMillis());
@@ -31,13 +30,14 @@ public class FapManager {
 
     public static void removeFapper(Player player) {
         fappers.remove(player);
+        times.remove(player);
     }
 
     public static void removeBossbar(Player player) {
-        BossBar bossBar = bossbars.get(player);
-
-        bossBar.removePlayer(player);
-        bossbars.remove(player);
+        BossBar bossBar = bossbars.remove(player);
+        if (bossBar != null) {
+            bossBar.removePlayer(player);
+        }
     }
 
     public static BossBar getBossbar(Player player) {
@@ -45,39 +45,29 @@ public class FapManager {
     }
 
     public static long getTime(Player player) {
-        return times.get(player);
+        Long t = times.get(player);
+        return t == null ? System.currentTimeMillis() : t;
     }
 
     public static int getCount(Player player) {
-        return fappers.get(player);
+        Integer c = fappers.get(player);
+        return c == null ? -1 : c;
     }
 
     public static Map<Player, Integer> getFappers() {
         return fappers;
     }
 
-    public static Map<Player, BossBar> getBossbars() {
-        return bossbars;
-    }
-
-    public static Map<Player, Long> getTimes() {
-        return times;
-    }
-
     public static boolean hasCooldown(String playerName) {
         int cooldownTime = FapPlugin.getConf().getInt("settings.cooldown");
-
-        if(cooldowns.containsKey(playerName)) {
-            long left = ((cooldowns.get(playerName)/1000)+cooldownTime) - (System.currentTimeMillis()/1000);
-
+        if (cooldowns.containsKey(playerName)) {
+            long left = ((cooldowns.get(playerName) / 1000) + cooldownTime) - (System.currentTimeMillis() / 1000);
             return left >= 0;
         }
-
         return false;
     }
 
     public static void updateCooldown(String playerName) {
         cooldowns.put(playerName, System.currentTimeMillis());
     }
-
 }
