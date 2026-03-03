@@ -62,7 +62,7 @@ public final class FapPlugin extends JavaPlugin implements Listener {
         Bukkit.getScheduler().runTaskTimer(this, () -> {
             for (Player player : FapManager.getFappers().keySet()) {
                 if (player == null || !player.isOnline()) continue;
-                if (FapManager.getCount(player) == -1) continue; // уже "финиширует" — не обязательно, но чище
+                if (FapManager.getCount(player) == -1) continue;
                 player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 200, 4));
             }
         }, 100L, 100L);
