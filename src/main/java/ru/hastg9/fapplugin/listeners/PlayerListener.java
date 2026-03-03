@@ -6,6 +6,7 @@ import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BossBar;
+import org.bukkit.entity.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LlamaSpit;
@@ -15,6 +16,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityRemoveEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -28,6 +30,7 @@ import ru.hastg9.fapplugin.utils.StringUtils;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class PlayerListener implements Listener {
 
@@ -77,7 +80,8 @@ public class PlayerListener implements Listener {
         final World world = player.getWorld();
 
         new BukkitRunnable() {
-            int shots = 0;
+            int shots = ThreadLocalRandom.current().nextInt(3,6);
+            int counter = 0;
 
             @Override
             public void run() {
@@ -87,8 +91,9 @@ public class PlayerListener implements Listener {
                     return;
                 }
 
-                if (shots < 3) {
+                if (counter<shots) {
                     world.playSound(player.getLocation(), getSoundSafe("shoot"), 5f, 2f);
+                    player.playHurtAnimation(0);
 
                     Location spawnLoc = player.getLocation().toVector()
                             .add(player.getLocation().getDirection().multiply(0.8D))
@@ -97,7 +102,7 @@ public class PlayerListener implements Listener {
 
                     spawnShootProjectile(player, spawnLoc);
 
-                    shots++;
+                    counter++;
                     return;
                 }
 
@@ -119,17 +124,17 @@ public class PlayerListener implements Listener {
             return;
         }
 
-        player.removePotionEffect(PotionEffectType.SLOWNESS);
-
-        FapManager.removeFapper(player);
-        FapManager.removeBossbar(player);
-
         if (successMessageAndStats) {
             long time = System.currentTimeMillis() - FapManager.getTime(player);
             player.sendMessage(String.format(FapPlugin.getMessage("messages.success"), StringUtils.formatDouble(time / 1000.0)));
             FapPlugin.getLeaderBoard().update(player, (int) time);
             FapManager.updateCooldown(player.getName());
         }
+
+        player.removePotionEffect(PotionEffectType.SLOWNESS);
+        FapManager.removeFapper(player);
+        FapManager.removeBossbar(player);
+
     }
 
     private Sound getSoundSafe(String name) {
@@ -148,6 +153,26 @@ public class PlayerListener implements Listener {
         spit.setMetadata("cm_shoot", new FixedMetadataValue(FapPlugin.getInstance(), player.getName()));
         spit.setShooter(player);
         spit.setVelocity(player.getLocation().getDirection().multiply(2));
+
+        TextDisplay text = (TextDisplay) player.getWorld()
+                .spawnEntity(location, EntityType.TEXT_DISPLAY);
+
+        text.setText("§lСперма");
+        text.setBillboard(Display.Billboard.CENTER);
+        text.setSeeThrough(true);
+        text.setShadowed(true);
+        text.setInterpolationDuration(1);
+
+        spit.addPassenger(text);
+    }
+
+    @EventHandler
+    public void onEntityRemove(EntityRemoveEvent event) {
+        if (event.getEntity() instanceof LlamaSpit spit) {
+            for (Entity passenger : spit.getPassengers()) {
+                passenger.remove();
+            }
+        }
     }
 
     @EventHandler
@@ -184,7 +209,11 @@ public class PlayerListener implements Listener {
     public void onProjectileHit(ProjectileHitEvent event) {
         Projectile projectile = event.getEntity();
         Entity entity = event.getHitEntity();
+
         if (!(projectile instanceof LlamaSpit) || !(entity instanceof Player target)) return;
+        for (Entity passenger : entity.getPassengers()) {
+            passenger.remove();
+        }
 
         if (!(projectile.getShooter() instanceof Player damager)) return;
         if (!shooters.contains(damager.getUniqueId())) return;
