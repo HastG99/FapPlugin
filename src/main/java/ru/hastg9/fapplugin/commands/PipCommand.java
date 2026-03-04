@@ -29,17 +29,23 @@ public class PipCommand implements CommandExecutor {
 
         Random random = new Random();
         int randNum = random.nextInt(25);
-        String title = "";
 
-        if(randNum <= FapPlugin.getConf().getInt("messages.pip.size.smallest"))
+        int smallest = FapPlugin.getConf().getInt("messages.pip.size.smallest");
+        int small = FapPlugin.getConf().getInt("messages.pip.size.small");
+        int medium = FapPlugin.getConf().getInt("messages.pip.size.medium");
+        int big = FapPlugin.getConf().getInt("messages.pip.size.big");
+
+        String title;
+
+        if (randNum <= smallest)
             title = FapPlugin.getMessage("messages.pip.title.smallest");
-        else if(randNum <= FapPlugin.getConf().getInt("messages.pip.size.small"))
+        else if (randNum <= small)
             title = FapPlugin.getMessage("messages.pip.title.small");
-        else if(randNum <= FapPlugin.getConf().getInt("messages.pip.size.medium"))
+        else if (randNum <= medium)
             title = FapPlugin.getMessage("messages.pip.title.medium");
-        else if(randNum <= FapPlugin.getConf().getInt("messages.pip.size.big"))
+        else if (randNum <= big)
             title = FapPlugin.getMessage("messages.pip.title.big");
-        else if(randNum <= FapPlugin.getConf().getInt("messages.pip.size.biggest"))
+        else
             title = FapPlugin.getMessage("messages.pip.title.biggest");
 
         String subtitle = String.format(FapPlugin.getMessage("messages.pip.title.subtitle"), randNum);
