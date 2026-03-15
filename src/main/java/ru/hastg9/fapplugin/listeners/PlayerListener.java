@@ -153,6 +153,7 @@ public class PlayerListener implements Listener {
         spit.setMetadata("cm_shoot", new FixedMetadataValue(FapPlugin.getInstance(), player.getName()));
         spit.setShooter(player);
         spit.setVelocity(player.getLocation().getDirection().multiply(2));
+        spit.setGlowing(true);
 
         TextDisplay text = (TextDisplay) player.getWorld()
                 .spawnEntity(location, EntityType.TEXT_DISPLAY);
