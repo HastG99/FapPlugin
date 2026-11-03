@@ -10,6 +10,11 @@ import ru.hastg9.fapplugin.FapPlugin;
 
 import java.util.ArrayList;
 import java.util.UUID;
+import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -92,5 +97,75 @@ public class LeaderBoardTest {
         board.update("zero", UUID.randomUUID(), 0);
         board.update("negative", UUID.randomUUID(), -1);
         assertEquals(0, board.size());
+    }
+
+    @Test
+    public void savedRecordsKeepTiesAndLongTimes() {
+        UUID one = UUID.randomUUID();
+        UUID two = UUID.randomUUID();
+        UUID three = UUID.randomUUID();
+        board.update("one", one, 1000);
+        board.update("two", two, 1000);
+        board.update("three", three, 5_000_000_000L);
+        board.save();
+        LeaderBoard loaded = new LeaderBoard("data");
+        loaded.load();
+        assertEquals(3, loaded.size());
+        assertEquals(1000, loaded.getEntry(one).getTime());
+        assertEquals(5_000_000_000L, loaded.getEntry(three).getTime());
+    }
+
+    @Test
+    public void brokenYamlIsNotOverwritten() throws Exception {
+        Path path = folder.getRoot().toPath().resolve("data.yml");
+        String broken = "records: [unfinished";
+        Files.writeString(path, broken);
+        LeaderBoard loaded = new LeaderBoard("data");
+        loaded.load();
+        loaded.update("player", UUID.randomUUID(), 1000);
+        loaded.save();
+        assertEquals(broken, Files.readString(path));
+        assertEquals(1, folder.getRoot().listFiles((dir, name) -> name.endsWith(".bak")).length);
+    }
+
+    @Test
+    public void invalidEntriesAreBackedUpBeforeSavingValidOnes() throws Exception {
+        UUID uuid = UUID.randomUUID();
+        Path path = folder.getRoot().toPath().resolve("data.yml");
+        String data = uuid + ":\n  username: player\n  time: 1000\nnot-a-uuid: broken\n";
+        Files.writeString(path, data);
+        board.load();
+        assertEquals(1, board.size());
+        board.save();
+        assertEquals(1, folder.getRoot().listFiles((dir, name) -> name.endsWith(".bak")).length);
+        Path backup = folder.getRoot().listFiles((dir, name) -> name.endsWith(".bak"))[0].toPath();
+        assertEquals(data, Files.readString(backup));
+        LeaderBoard loaded = new LeaderBoard("data");
+        loaded.load();
+        assertEquals(1000, loaded.getEntry(uuid).getTime());
+    }
+
+    @Test
+    public void updatesAndSavesCanRunTogether() throws Exception {
+        List<UUID> players = new ArrayList<>();
+        for (int i = 0; i < 20; i++) players.add(UUID.randomUUID());
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var updates = executor.submit(() -> {
+                for (int time = 100; time > 0; time--) {
+                    for (UUID uuid : players) board.update(uuid.toString(), uuid, time);
+                }
+            });
+            var saves = executor.submit(() -> {
+                for (int i = 0; i < 20; i++) board.save();
+            });
+            updates.get(10, TimeUnit.SECONDS);
+            saves.get(10, TimeUnit.SECONDS);
+        }
+        board.save();
+        LeaderBoard loaded = new LeaderBoard("data");
+        loaded.load();
+        assertEquals(players.size(), loaded.size());
+        for (UUID uuid : players) assertEquals(1, loaded.getEntry(uuid).getTime());
+        assertEquals(0, folder.getRoot().listFiles((dir, name) -> name.endsWith(".tmp")).length);
     }
 }
