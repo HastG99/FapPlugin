@@ -6,16 +6,12 @@ public class BoardEntry implements Comparable<BoardEntry> {
 
     private final String name;
     private final UUID uuid;
-    private int time;
+    private final long time;
 
-    public BoardEntry(String name, UUID uuid, int time) {
+    public BoardEntry(String name, UUID uuid, long time) {
         this.name = name;
         this.uuid = uuid;
         this.time = time;
-    }
-
-    public void updateRecord(int time) {
-        if(this.time > time) this.time = time;
     }
 
     public String getName() {
@@ -26,13 +22,14 @@ public class BoardEntry implements Comparable<BoardEntry> {
         return uuid;
     }
 
-    public int getTime() {
+    public long getTime() {
         return time;
     }
 
     @Override
     public int compareTo(BoardEntry other) {
-        return other.getTime() - time;
+        int result = Long.compare(time, other.time);
+        return result != 0 ? result : uuid.compareTo(other.uuid);
     }
 
 }

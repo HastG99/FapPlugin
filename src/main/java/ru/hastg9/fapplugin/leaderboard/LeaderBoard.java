@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class LeaderBoard {
     private final TreeSet<BoardEntry> records;
-    private final ConcurrentHashMap<String, BoardEntry> recordsMap;
+    private final ConcurrentHashMap<UUID, BoardEntry> recordsMap;
     private final YamlConfiguration configuration;
     private final File dataFile;
 
@@ -35,24 +35,21 @@ public class LeaderBoard {
         configuration = YamlConfiguration.loadConfiguration(dataFile);
     }
 
-    public void update(Player player, int record) {
+    public void update(Player player, long record) {
         update(player.getName(), player.getUniqueId(), record);
     }
 
-    public synchronized void update(String name, UUID uuid, int record) {
-        if (!recordsMap.containsKey(name)) {
-            BoardEntry entry = new BoardEntry(name, uuid, record);
-
-            records.add(entry);
-            recordsMap.put(name, entry);
-            return;
-        }
-
-        BoardEntry entry = getEntry(name);
-        entry.updateRecord(record);
+    public synchronized void update(String name, UUID uuid, long record) {
+        if (name == null || name.isBlank() || record <= 0) return;
+        BoardEntry previous = recordsMap.get(uuid);
+        if (previous != null) records.remove(previous);
+        BoardEntry entry = new BoardEntry(name, uuid,
+                previous == null ? record : Math.min(record, previous.getTime()));
+        records.add(entry);
+        recordsMap.put(uuid, entry);
     }
 
-    public int size() {
+    public synchronized int size() {
         return records.size();
     }
 
@@ -60,7 +57,7 @@ public class LeaderBoard {
         final Set<BoardEntry> result = new TreeSet<>();
         Iterator<BoardEntry> it = records.iterator();
 
-        for (int i = 1; i < numberOfResults; i++) {
+        for (int i = 0; i < numberOfResults; i++) {
             if(!it.hasNext()) break;
 
             result.add(it.next());
@@ -94,8 +91,14 @@ public class LeaderBoard {
         }
     }
 
-    public BoardEntry getEntry(String playerName) {
-        return recordsMap.get(playerName);
+    public synchronized BoardEntry getEntry(String playerName) {
+        return recordsMap.values().stream()
+                .filter(entry -> entry.getName().equalsIgnoreCase(playerName))
+                .findFirst().orElse(null);
+    }
+
+    public synchronized BoardEntry getEntry(UUID uuid) {
+        return recordsMap.get(uuid);
     }
 
     public void save() {
@@ -120,7 +123,7 @@ public class LeaderBoard {
         keys.forEach(key -> {
             ConfigurationSection section = configuration.getConfigurationSection(key);
 
-            update(section.getString("username"), UUID.fromString(key), section.getInt("time"));
+            update(section.getString("username"), UUID.fromString(key), section.getLong("time"));
         });
     }
 

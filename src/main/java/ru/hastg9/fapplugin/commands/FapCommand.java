@@ -40,7 +40,8 @@ public class FapCommand implements CommandExecutor {
 
                 FapPlugin.getLeaderBoard().printTop(sender, 10);
 
-                BoardEntry entry = FapPlugin.getLeaderBoard().getEntry(sender.getName());
+                BoardEntry entry = sender instanceof Player player
+                        ? FapPlugin.getLeaderBoard().getEntry(player.getUniqueId()) : null;
 
                 if(entry != null) {
                     String time = StringUtils.formatDouble(entry.getTime() / 1000.0);
