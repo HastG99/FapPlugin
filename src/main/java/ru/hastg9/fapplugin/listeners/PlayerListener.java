@@ -21,6 +21,7 @@ import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.metadata.MetadataValue;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import ru.hastg9.fapplugin.FapPlugin;
@@ -158,6 +159,7 @@ public class PlayerListener implements Listener {
         TextDisplay text = (TextDisplay) player.getWorld()
                 .spawnEntity(location, EntityType.TEXT_DISPLAY);
 
+        text.setMetadata("cm_shoot", new FixedMetadataValue(FapPlugin.getInstance(), player.getName()));
         text.setText("§lСперма");
         text.setBillboard(Display.Billboard.CENTER);
         text.setSeeThrough(true);
@@ -169,10 +171,8 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onEntityRemove(EntityRemoveEvent event) {
-        if (event.getEntity() instanceof LlamaSpit spit) {
-            for (Entity passenger : spit.getPassengers()) {
-                passenger.remove();
-            }
+        if (event.getEntity() instanceof LlamaSpit spit && isOwnEntity(spit)) {
+            removeShootText(spit);
         }
     }
 
@@ -188,7 +188,7 @@ public class PlayerListener implements Listener {
         if (!(event.getEntity() instanceof Player player)) return;
 
         if (event.getDamager() instanceof LlamaSpit spit) {
-            if (spit.hasMetadata("cm_shoot")) event.setDamage(0.0);
+            if (isOwnEntity(spit)) event.setDamage(0.0);
         }
 
         if (!FapManager.hasFapper(player)) return;
@@ -211,11 +211,10 @@ public class PlayerListener implements Listener {
         Projectile projectile = event.getEntity();
         Entity entity = event.getHitEntity();
 
-        if (!(projectile instanceof LlamaSpit) || !(entity instanceof Player target)) return;
-        for (Entity passenger : entity.getPassengers()) {
-            passenger.remove();
-        }
+        if (!(projectile instanceof LlamaSpit spit) || !isOwnEntity(spit)) return;
+        removeShootText(spit);
 
+        if (!(entity instanceof Player target)) return;
         if (!(projectile.getShooter() instanceof Player damager)) return;
         if (!shooters.contains(damager.getUniqueId())) return;
 
@@ -223,6 +222,21 @@ public class PlayerListener implements Listener {
         target.sendMessage(FapPlugin.getMessage("messages.were-hit"));
 
         shooters.remove(damager.getUniqueId());
+    }
+
+    private void removeShootText(LlamaSpit spit) {
+        for (Entity passenger : spit.getPassengers()) {
+            if (passenger instanceof TextDisplay && isOwnEntity(passenger)) {
+                passenger.remove();
+            }
+        }
+    }
+
+    private boolean isOwnEntity(Entity entity) {
+        for (MetadataValue value : entity.getMetadata("cm_shoot")) {
+            if (value.getOwningPlugin() == FapPlugin.getInstance()) return true;
+        }
+        return false;
     }
 
     private boolean isLookAround(Location from, Location to) {
