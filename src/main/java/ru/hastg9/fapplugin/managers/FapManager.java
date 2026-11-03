@@ -9,12 +9,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 public class FapManager {
 
     private static final Map<UUID, FapSession> fappers = new HashMap<>();
-    private static final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
+    private static final Map<UUID, Long> cooldowns = new HashMap<>();
 
     public static void addFapper(Player player, BossBar bossBar) {
         removeFapper(player);
@@ -57,16 +57,26 @@ public class FapManager {
         return new HashSet<>(fappers.keySet());
     }
 
-    public static boolean hasCooldown(String playerName) {
-        int cooldownTime = FapPlugin.getConf().getInt("settings.cooldown");
-        if (cooldowns.containsKey(playerName)) {
-            long left = ((cooldowns.get(playerName) / 1000) + cooldownTime) - (System.currentTimeMillis() / 1000);
-            return left >= 0;
-        }
+    public static boolean hasCooldown(UUID uuid) {
+        Long started = cooldowns.get(uuid);
+        if (started == null) return false;
+        long duration = TimeUnit.SECONDS.toNanos(FapPlugin.getConf().getInt("settings.cooldown"));
+        if (System.nanoTime() - started < duration) return true;
+        cooldowns.remove(uuid);
         return false;
     }
 
-    public static void updateCooldown(String playerName) {
-        cooldowns.put(playerName, System.currentTimeMillis());
+    public static void updateCooldown(UUID uuid) {
+        cooldowns.put(uuid, System.nanoTime());
+    }
+
+    public static void clearExpiredCooldowns() {
+        for (UUID uuid : new HashSet<>(cooldowns.keySet())) hasCooldown(uuid);
+    }
+
+    public static void clear() {
+        for (FapSession session : fappers.values()) session.close();
+        fappers.clear();
+        cooldowns.clear();
     }
 }

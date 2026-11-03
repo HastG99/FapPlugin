@@ -69,7 +69,7 @@ public class FapCommand implements CommandExecutor {
             return true;
         }
 
-        if(FapManager.hasCooldown(player.getName()) && !player.hasPermission("fap.bypass")) {
+        if(FapManager.hasCooldown(player.getUniqueId()) && !player.hasPermission("fap.bypass")) {
             player.sendMessage(FapPlugin.getMessage("messages.cooldown"));
             return true;
         }

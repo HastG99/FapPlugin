@@ -17,6 +17,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.scheduler.BukkitTask;
@@ -33,6 +37,7 @@ import ru.hastg9.fapplugin.managers.FapManager;
 import ru.hastg9.fapplugin.managers.FapSession;
 
 import java.util.UUID;
+import java.util.List;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -80,10 +85,11 @@ public class SessionTest {
     private LeaderBoard board;
     private BukkitTask task;
     private Runnable finish;
+    private FapPlugin plugin;
 
     @Before
     public void setUp() {
-        FapPlugin plugin = mock(FapPlugin.class);
+        plugin = mock(FapPlugin.class);
         when(plugin.getConfig()).thenReturn(new YamlConfiguration());
         board = mock(LeaderBoard.class);
         pluginMock = mockStatic(FapPlugin.class);
@@ -103,6 +109,7 @@ public class SessionTest {
         player = mock(Player.class);
         when(player.getUniqueId()).thenReturn(UUID.randomUUID());
         when(player.getName()).thenReturn("player");
+        bukkitMock.when(() -> Bukkit.getPlayer(player.getUniqueId())).thenReturn(player);
         when(player.isOnline()).thenReturn(true);
         when(player.getWorld()).thenReturn(world);
         when(player.getLocation()).thenReturn(new Location(world, 0, 64, 0));
@@ -113,7 +120,7 @@ public class SessionTest {
 
     @After
     public void tearDown() {
-        for (UUID uuid : FapManager.getFappers()) FapManager.removeFapper(uuid);
+        listener.clear();
         bukkitMock.close();
         pluginMock.close();
     }
@@ -130,7 +137,7 @@ public class SessionTest {
     private void interrupt() {
         EntityDamageByEntityEvent event = mock(EntityDamageByEntityEvent.class);
         when(event.getEntity()).thenReturn(player);
-        listener.onAttack(event);
+        listener.onDamage(event);
     }
 
     @Test
@@ -177,5 +184,86 @@ public class SessionTest {
         verify(board).update(eq(player), anyLong());
         verify(task).cancel();
         verify(player).sendMessage(startsWith("Done:"));
+    }
+
+    @Test
+    public void quitStopsAnUnfinishedSession() {
+        PlayerQuitEvent event = mock(PlayerQuitEvent.class);
+        when(event.getPlayer()).thenReturn(player);
+        listener.onQuit(event);
+        assertFalse(FapManager.hasFapper(player));
+        verify(bossBar).removeAll();
+    }
+
+    @Test
+    public void deathCancelsTheFinishTask() {
+        startFinish();
+        PlayerDeathEvent event = mock(PlayerDeathEvent.class);
+        when(event.getEntity()).thenReturn(player);
+        listener.onDeath(event);
+        finish.run();
+        assertFalse(FapManager.hasFapper(player));
+        verify(task).cancel();
+        verify(board, never()).update(any(Player.class), anyLong());
+    }
+
+    @Test
+    public void cancelledDamageDoesNotInterrupt() {
+        EntityDamageByEntityEvent event = mock(EntityDamageByEntityEvent.class);
+        when(event.getEntity()).thenReturn(player);
+        when(event.isCancelled()).thenReturn(true);
+        listener.onDamage(event);
+        assertTrue(FapManager.hasFapper(player));
+    }
+
+    @Test
+    public void teleportToAnotherWorldStopsTheSession() {
+        PlayerTeleportEvent event = mock(PlayerTeleportEvent.class);
+        when(event.getPlayer()).thenReturn(player);
+        when(event.getFrom()).thenReturn(new Location(world, 0, 64, 0));
+        when(event.getTo()).thenReturn(new Location(mock(World.class), 0, 64, 0));
+        listener.onTeleport(event);
+        assertFalse(FapManager.hasFapper(player));
+    }
+
+    @Test
+    public void shutdownClearsSessionsAndCooldowns() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("settings.cooldown", 90);
+        pluginMock.when(FapPlugin::getConf).thenReturn(config);
+        FapManager.updateCooldown(player.getUniqueId());
+        assertTrue(FapManager.hasCooldown(player.getUniqueId()));
+        startFinish();
+        listener.clear();
+        assertTrue(FapManager.getFappers().isEmpty());
+        assertFalse(FapManager.hasCooldown(player.getUniqueId()));
+        verify(task).cancel();
+    }
+
+    @Test
+    public void zeroCooldownExpiresImmediately() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("settings.cooldown", 0);
+        pluginMock.when(FapPlugin::getConf).thenReturn(config);
+        FapManager.updateCooldown(player.getUniqueId());
+        assertFalse(FapManager.hasCooldown(player.getUniqueId()));
+    }
+
+    @Test
+    public void quitRemovesFlyingProjectiles() {
+        LlamaSpit spit = mock(LlamaSpit.class);
+        UUID uuid = UUID.randomUUID();
+        when(spit.getUniqueId()).thenReturn(uuid);
+        when(spit.getMetadata("cm_shoot")).thenReturn(List.of(new FixedMetadataValue(plugin, true)));
+        when(world.spawnEntity(any(Location.class), eq(EntityType.LLAMA_SPIT))).thenReturn(spit);
+        bukkitMock.when(() -> Bukkit.getEntity(uuid)).thenReturn(spit);
+        startFinish();
+        finish.run();
+        PlayerQuitEvent event = mock(PlayerQuitEvent.class);
+        when(event.getPlayer()).thenReturn(player);
+        listener.onQuit(event);
+        verify(spit).remove();
+        verify(task).cancel();
+        assertFalse(FapManager.hasFapper(player));
     }
 }

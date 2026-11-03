@@ -13,13 +13,18 @@ import org.bukkit.entity.LlamaSpit;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.EntityRemoveEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.potion.PotionEffectType;
@@ -30,6 +35,9 @@ import ru.hastg9.fapplugin.managers.FapSession;
 import ru.hastg9.fapplugin.utils.StringUtils;
 
 import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -38,6 +46,7 @@ public class PlayerListener implements Listener {
 
     private static final int MAX_CLICKS = 35;
     private final Set<UUID> shooters = new HashSet<>();
+    private final Map<UUID, UUID> projectiles = new HashMap<>();
 
     @EventHandler
     public void onClick(PlayerInteractEvent event) {
@@ -117,6 +126,7 @@ public class PlayerListener implements Listener {
     }
 
     private void cleanup(Player player, boolean successMessageAndStats) {
+        if (!successMessageAndStats) removeProjectiles(player.getUniqueId());
         FapSession session = FapManager.getSession(player);
         if (session == null) return;
         long time = session.getTime();
@@ -125,7 +135,7 @@ public class PlayerListener implements Listener {
 
         if (successMessageAndStats && player.isOnline() && time > 0) {
             FapPlugin.getLeaderBoard().update(player, time);
-            FapManager.updateCooldown(player.getName());
+            FapManager.updateCooldown(player.getUniqueId());
             player.sendMessage(String.format(FapPlugin.getMessage("messages.success"), StringUtils.formatDouble(time / 1000.0)));
         }
     }
@@ -144,6 +154,7 @@ public class PlayerListener implements Listener {
     private void spawnShootProjectile(Player player, Location location) {
         LlamaSpit spit = (LlamaSpit) player.getWorld().spawnEntity(location, EntityType.LLAMA_SPIT);
         spit.setMetadata("cm_shoot", new FixedMetadataValue(FapPlugin.getInstance(), player.getName()));
+        projectiles.put(spit.getUniqueId(), player.getUniqueId());
         spit.setShooter(player);
         spit.setVelocity(player.getLocation().getDirection().multiply(2));
         spit.setGlowing(true);
@@ -165,6 +176,8 @@ public class PlayerListener implements Listener {
     public void onEntityRemove(EntityRemoveEvent event) {
         if (event.getEntity() instanceof LlamaSpit spit && isOwnEntity(spit)) {
             removeShootText(spit);
+            UUID owner = projectiles.remove(spit.getUniqueId());
+            if (owner != null && !projectiles.containsValue(owner)) shooters.remove(owner);
         }
     }
 
@@ -183,11 +196,54 @@ public class PlayerListener implements Listener {
             if (isOwnEntity(spit)) event.setDamage(0.0);
         }
 
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onDamage(EntityDamageEvent event) {
+        if (event.isCancelled() || !(event.getEntity() instanceof Player player)) return;
         if (!FapManager.hasFapper(player)) return;
-
         cleanup(player, false);
-
         player.sendMessage(FapPlugin.getMessage("messages.disturbed"));
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        cleanup(event.getPlayer(), false);
+    }
+
+    @EventHandler
+    public void onDeath(PlayerDeathEvent event) {
+        cleanup(event.getEntity(), false);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onTeleport(PlayerTeleportEvent event) {
+        if (!event.isCancelled() && !isLookAround(event.getFrom(), event.getTo())) {
+            cleanup(event.getPlayer(), false);
+        }
+    }
+
+    public void clear() {
+        for (UUID uuid : FapManager.getFappers()) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null) cleanup(player, false);
+        }
+        for (UUID owner : new HashSet<>(projectiles.values())) removeProjectiles(owner);
+        shooters.clear();
+        FapManager.clear();
+    }
+
+    private void removeProjectiles(UUID owner) {
+        for (UUID uuid : new HashSet<>(projectiles.keySet())) {
+            if (!owner.equals(projectiles.get(uuid))) continue;
+            projectiles.remove(uuid);
+            Entity entity = Bukkit.getEntity(uuid);
+            if (entity instanceof LlamaSpit spit && isOwnEntity(spit)) {
+                removeShootText(spit);
+                spit.remove();
+            }
+        }
+        shooters.remove(owner);
     }
 
     @EventHandler
@@ -231,6 +287,7 @@ public class PlayerListener implements Listener {
 
     private boolean isLookAround(Location from, Location to) {
         if (to == null) return true;
-        return from.getX() == to.getX() && from.getZ() == to.getZ() && from.getY() == to.getY();
+        return Objects.equals(from.getWorld(), to.getWorld())
+                && from.getX() == to.getX() && from.getZ() == to.getZ() && from.getY() == to.getY();
     }
 }

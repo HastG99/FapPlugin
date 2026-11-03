@@ -21,6 +21,7 @@ public final class FapPlugin extends JavaPlugin implements Listener {
 
     private static FapPlugin instance;
     private static LeaderBoard leaderBoard;
+    private PlayerListener playerListener;
 
     public static final Logger LOGGER = Logger.getLogger(FapPlugin.class.getSimpleName());
 
@@ -40,13 +41,10 @@ public final class FapPlugin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            if (FapManager.hasFapper(p)) {
-                p.removePotionEffect(PotionEffectType.SLOWNESS);
-                FapManager.removeFapper(p);
-            }
-        }
-        leaderBoard.save();
+        Bukkit.getScheduler().cancelTasks(this);
+        if (playerListener != null) playerListener.clear();
+        else FapManager.clear();
+        if (leaderBoard != null) leaderBoard.save();
     }
 
     private void registerCommands() {
@@ -55,14 +53,19 @@ public final class FapPlugin extends JavaPlugin implements Listener {
     }
 
     private void registerListeners() {
-        Bukkit.getPluginManager().registerEvents(new PlayerListener(), this);
+        playerListener = new PlayerListener();
+        Bukkit.getPluginManager().registerEvents(playerListener, this);
     }
 
     private void scheduleTasks() {
         Bukkit.getScheduler().runTaskTimer(this, () -> {
+            FapManager.clearExpiredCooldowns();
             for (UUID uuid : FapManager.getFappers()) {
                 Player player = Bukkit.getPlayer(uuid);
-                if (player == null || !player.isOnline()) continue;
+                if (player == null || !player.isOnline()) {
+                    FapManager.removeFapper(uuid);
+                    continue;
+                }
                 if (FapManager.getCount(player) == -1) continue;
                 player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 200, 4));
             }
