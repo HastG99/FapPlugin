@@ -26,9 +26,8 @@ public class FapCommand implements CommandExecutor {
                     return true;
                 }
 
-                FapPlugin.getInstance().reloadConfig();
-
-                sender.sendMessage(FapPlugin.getMessage("messages.reload"));
+                boolean loaded = FapPlugin.getInstance().reloadSettings();
+                sender.sendMessage(FapPlugin.getMessage(loaded ? "messages.reload" : "messages.reload-failed"));
                 return true;
             }
 
@@ -62,7 +61,7 @@ public class FapCommand implements CommandExecutor {
             return true;
         }
 
-        Player player = Bukkit.getPlayer(sender.getName());
+        Player player = (Player) sender;
 
         if(FapManager.hasFapper(player)) {
             player.sendMessage(FapPlugin.getMessage("messages.already"));

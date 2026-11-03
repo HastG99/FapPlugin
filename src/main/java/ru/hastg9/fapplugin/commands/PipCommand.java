@@ -1,17 +1,11 @@
 package ru.hastg9.fapplugin.commands;
 
-import org.bukkit.Bukkit;
-import org.bukkit.boss.BarColor;
-import org.bukkit.boss.BarStyle;
-import org.bukkit.boss.BossBar;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 import ru.hastg9.fapplugin.FapPlugin;
-import ru.hastg9.fapplugin.managers.FapManager;
 
 import java.util.Random;
 
@@ -25,10 +19,11 @@ public class PipCommand implements CommandExecutor {
             return true;
         }
 
-        Player player = Bukkit.getPlayer(sender.getName());
+        Player player = (Player) sender;
 
         Random random = new Random();
-        int randNum = random.nextInt(25);
+        int biggest = FapPlugin.getConf().getInt("messages.pip.size.biggest");
+        int randNum = random.nextInt(biggest + 1);
 
         int smallest = FapPlugin.getConf().getInt("messages.pip.size.smallest");
         int small = FapPlugin.getConf().getInt("messages.pip.size.small");

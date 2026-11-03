@@ -90,10 +90,12 @@ public class SessionTest {
     @Before
     public void setUp() {
         plugin = mock(FapPlugin.class);
-        when(plugin.getConfig()).thenReturn(new YamlConfiguration());
+        YamlConfiguration config = new YamlConfiguration();
+        when(plugin.getConfig()).thenReturn(config);
         board = mock(LeaderBoard.class);
         pluginMock = mockStatic(FapPlugin.class);
         pluginMock.when(FapPlugin::getInstance).thenReturn(plugin);
+        pluginMock.when(FapPlugin::getConf).thenReturn(config);
         pluginMock.when(FapPlugin::getLeaderBoard).thenReturn(board);
         pluginMock.when(() -> FapPlugin.getMessage("messages.success")).thenReturn("Done: %s");
         pluginMock.when(() -> FapPlugin.getMessage("messages.disturbed")).thenReturn("Stopped");
@@ -265,5 +267,20 @@ public class SessionTest {
         verify(spit).remove();
         verify(task).cancel();
         assertFalse(FapManager.hasFapper(player));
+    }
+
+    @Test
+    public void failedSchedulerDoesNotLeaveThePlayerLocked() {
+        BukkitScheduler scheduler = Bukkit.getScheduler();
+        when(scheduler.runTaskTimer(eq(plugin), any(Runnable.class), eq(0L), eq(9L)))
+                .thenThrow(new IllegalStateException("scheduler stopped"));
+        FapManager.setFapper(player, 34);
+        PlayerInteractEvent event = mock(PlayerInteractEvent.class);
+        when(event.getPlayer()).thenReturn(player);
+        when(event.getAction()).thenReturn(Action.LEFT_CLICK_AIR);
+        listener.onClick(event);
+        assertFalse(FapManager.hasFapper(player));
+        verify(bossBar).removeAll();
+        verify(board, never()).update(any(Player.class), anyLong());
     }
 }

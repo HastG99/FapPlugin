@@ -3,6 +3,7 @@ package ru.hastg9.fapplugin;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -16,12 +17,15 @@ import ru.hastg9.fapplugin.managers.FapManager;
 
 import java.util.logging.Logger;
 import java.util.UUID;
+import java.io.File;
+import java.io.IOException;
 
 public final class FapPlugin extends JavaPlugin implements Listener {
 
     private static FapPlugin instance;
     private static LeaderBoard leaderBoard;
     private PlayerListener playerListener;
+    private FileConfiguration settings;
 
     public static final Logger LOGGER = Logger.getLogger(FapPlugin.class.getSimpleName());
 
@@ -29,6 +33,10 @@ public final class FapPlugin extends JavaPlugin implements Listener {
     public void onEnable() {
         instance = this;
         saveDefaultConfig();
+        if (!reloadSettings()) {
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
 
         registerCommands();
         registerListeners();
@@ -75,6 +83,21 @@ public final class FapPlugin extends JavaPlugin implements Listener {
 
     public static String getMessage(String path) {
         return ChatColor.translateAlternateColorCodes('&', instance.getConfig().getString(path));
+    }
+
+    @Override
+    public FileConfiguration getConfig() {
+        return settings == null ? super.getConfig() : settings;
+    }
+
+    public boolean reloadSettings() {
+        try {
+            settings = PluginConfig.load(new File(getDataFolder(), "config.yml"), getResource("config.yml"));
+            return true;
+        } catch (IOException | InvalidConfigurationException | IllegalArgumentException ex) {
+            getLogger().warning("Could not load config.yml: " + ex.getMessage());
+            return false;
+        }
     }
 
     public static FapPlugin getInstance() {

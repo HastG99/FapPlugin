@@ -41,6 +41,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.logging.Level;
 
 public class PlayerListener implements Listener {
 
@@ -79,7 +80,12 @@ public class PlayerListener implements Listener {
 
         if (count >= MAX_CLICKS) {
             bossBar.setColor(BarColor.YELLOW);
-            startFinishSequence(player);
+            try {
+                startFinishSequence(player);
+            } catch (RuntimeException ex) {
+                cleanup(player, false);
+                FapPlugin.LOGGER.log(Level.WARNING, "Could not start finish task", ex);
+            }
         }
     }
 
@@ -119,7 +125,7 @@ public class PlayerListener implements Listener {
                     }
                 } catch (RuntimeException ex) {
                     cleanup(player, false);
-                    FapPlugin.LOGGER.log(java.util.logging.Level.WARNING, "Could not finish session", ex);
+                    FapPlugin.LOGGER.log(Level.WARNING, "Could not finish session", ex);
                 }
             }
         }.runTaskTimer(FapPlugin.getInstance(), 0L, 9L));
@@ -141,7 +147,7 @@ public class PlayerListener implements Listener {
     }
 
     private Sound getSoundSafe(String name) {
-        String key = FapPlugin.getInstance().getConfig().getString("settings.sounds." + name);
+        String key = FapPlugin.getConf().getString("settings.sounds." + name);
         if (key == null) return Sound.BLOCK_SLIME_BLOCK_FALL;
 
         try {
