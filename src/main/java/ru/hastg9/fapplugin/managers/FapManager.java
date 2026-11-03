@@ -5,57 +5,56 @@ import org.bukkit.entity.Player;
 import ru.hastg9.fapplugin.FapPlugin;
 
 import java.util.Map;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class FapManager {
 
-    private static final Map<Player, Integer> fappers = new ConcurrentHashMap<>();
-    private static final Map<Player, BossBar> bossbars = new ConcurrentHashMap<>();
-    private static final Map<Player, Long> times = new ConcurrentHashMap<>();
+    private static final Map<UUID, FapSession> fappers = new HashMap<>();
     private static final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
 
     public static void addFapper(Player player, BossBar bossBar) {
-        bossbars.put(player, bossBar);
-        times.put(player, System.currentTimeMillis());
-        fappers.put(player, 0);
+        removeFapper(player);
+        fappers.put(player.getUniqueId(), new FapSession(bossBar));
     }
 
     public static void setFapper(Player player, int count) {
-        fappers.put(player, count);
+        FapSession session = getSession(player);
+        if (session != null) session.setCount(count);
     }
 
     public static boolean hasFapper(Player player) {
-        return fappers.containsKey(player);
+        return getSession(player) != null;
     }
 
     public static void removeFapper(Player player) {
-        fappers.remove(player);
-        times.remove(player);
+        removeFapper(player.getUniqueId());
     }
 
-    public static void removeBossbar(Player player) {
-        BossBar bossBar = bossbars.remove(player);
-        if (bossBar != null) {
-            bossBar.removePlayer(player);
-        }
+    public static void removeFapper(UUID uuid) {
+        FapSession session = fappers.remove(uuid);
+        if (session != null) session.close();
     }
 
     public static BossBar getBossbar(Player player) {
-        return bossbars.get(player);
+        FapSession session = getSession(player);
+        return session == null ? null : session.getBossBar();
     }
 
-    public static long getTime(Player player) {
-        Long t = times.get(player);
-        return t == null ? System.currentTimeMillis() : t;
+    public static FapSession getSession(Player player) {
+        return fappers.get(player.getUniqueId());
     }
 
     public static int getCount(Player player) {
-        Integer c = fappers.get(player);
-        return c == null ? -1 : c;
+        FapSession session = getSession(player);
+        return session == null ? -1 : session.getCount();
     }
 
-    public static Map<Player, Integer> getFappers() {
-        return fappers;
+    public static Set<UUID> getFappers() {
+        return new HashSet<>(fappers.keySet());
     }
 
     public static boolean hasCooldown(String playerName) {

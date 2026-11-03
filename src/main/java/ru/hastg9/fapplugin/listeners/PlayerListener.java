@@ -26,6 +26,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import ru.hastg9.fapplugin.FapPlugin;
 import ru.hastg9.fapplugin.managers.FapManager;
+import ru.hastg9.fapplugin.managers.FapSession;
 import ru.hastg9.fapplugin.utils.StringUtils;
 
 import java.util.HashSet;
@@ -74,68 +75,59 @@ public class PlayerListener implements Listener {
     }
 
     private void startFinishSequence(Player player) {
+        FapSession session = FapManager.getSession(player);
+        if (session == null) return;
         FapManager.setFapper(player, -1);
 
         shooters.add(player.getUniqueId());
 
-        final World world = player.getWorld();
-
-        new BukkitRunnable() {
+        session.setTask(new BukkitRunnable() {
             int shots = ThreadLocalRandom.current().nextInt(3,6);
             int counter = 0;
 
             @Override
             public void run() {
-                if (!player.isOnline()) {
-                    cleanup(player, false);
+                if (FapManager.getSession(player) != session) {
                     cancel();
                     return;
                 }
-
-                if (counter<shots) {
-                    world.playSound(player.getLocation(), getSoundSafe("shoot"), 5f, 2f);
-                    player.playHurtAnimation(0);
-
-                    Location spawnLoc = player.getLocation().toVector()
-                            .add(player.getLocation().getDirection().multiply(0.8D))
-                            .toLocation(player.getWorld())
-                            .add(0.0D, 1.0D, 0.0D);
-
-                    spawnShootProjectile(player, spawnLoc);
-
-                    counter++;
+                if (!player.isOnline() || player.isDead()) {
+                    cleanup(player, false);
                     return;
                 }
-
-                cleanup(player, true);
-                cancel();
+                try {
+                    if (counter < shots) {
+                        player.getWorld().playSound(player.getLocation(), getSoundSafe("shoot"), 5f, 2f);
+                        player.playHurtAnimation(0);
+                        Location spawnLoc = player.getLocation().toVector()
+                                .add(player.getLocation().getDirection().multiply(0.8D))
+                                .toLocation(player.getWorld())
+                                .add(0.0D, 1.0D, 0.0D);
+                        spawnShootProjectile(player, spawnLoc);
+                        counter++;
+                    } else {
+                        cleanup(player, true);
+                    }
+                } catch (RuntimeException ex) {
+                    cleanup(player, false);
+                    FapPlugin.LOGGER.log(java.util.logging.Level.WARNING, "Could not finish session", ex);
+                }
             }
-        }.runTaskTimer(FapPlugin.getInstance(), 0L, 9L);
-        Bukkit.getScheduler().runTaskLater(FapPlugin.getInstance(), () -> {
-            if (FapManager.hasFapper(player) && FapManager.getCount(player) == -1) {
-                cleanup(player, true);
-            }
-        }, 100L);
+        }.runTaskTimer(FapPlugin.getInstance(), 0L, 9L));
     }
 
     private void cleanup(Player player, boolean successMessageAndStats) {
-        if (!player.isOnline()) {
-            FapManager.removeBossbar(player);
-            FapManager.removeFapper(player);
-            return;
-        }
-
-        if (successMessageAndStats) {
-            long time = System.currentTimeMillis() - FapManager.getTime(player);
-            player.sendMessage(String.format(FapPlugin.getMessage("messages.success"), StringUtils.formatDouble(time / 1000.0)));
-            FapPlugin.getLeaderBoard().update(player, (int) time);
-            FapManager.updateCooldown(player.getName());
-        }
-
-        player.removePotionEffect(PotionEffectType.SLOWNESS);
+        FapSession session = FapManager.getSession(player);
+        if (session == null) return;
+        long time = session.getTime();
         FapManager.removeFapper(player);
-        FapManager.removeBossbar(player);
+        player.removePotionEffect(PotionEffectType.SLOWNESS);
 
+        if (successMessageAndStats && player.isOnline() && time > 0) {
+            FapPlugin.getLeaderBoard().update(player, time);
+            FapManager.updateCooldown(player.getName());
+            player.sendMessage(String.format(FapPlugin.getMessage("messages.success"), StringUtils.formatDouble(time / 1000.0)));
+        }
     }
 
     private Sound getSoundSafe(String name) {
@@ -193,9 +185,7 @@ public class PlayerListener implements Listener {
 
         if (!FapManager.hasFapper(player)) return;
 
-        player.removePotionEffect(PotionEffectType.SLOWNESS);
-        FapManager.removeBossbar(player);
-        FapManager.removeFapper(player);
+        cleanup(player, false);
 
         player.sendMessage(FapPlugin.getMessage("messages.disturbed"));
     }

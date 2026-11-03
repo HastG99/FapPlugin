@@ -15,6 +15,7 @@ import ru.hastg9.fapplugin.listeners.PlayerListener;
 import ru.hastg9.fapplugin.managers.FapManager;
 
 import java.util.logging.Logger;
+import java.util.UUID;
 
 public final class FapPlugin extends JavaPlugin implements Listener {
 
@@ -42,7 +43,6 @@ public final class FapPlugin extends JavaPlugin implements Listener {
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (FapManager.hasFapper(p)) {
                 p.removePotionEffect(PotionEffectType.SLOWNESS);
-                FapManager.removeBossbar(p);
                 FapManager.removeFapper(p);
             }
         }
@@ -60,7 +60,8 @@ public final class FapPlugin extends JavaPlugin implements Listener {
 
     private void scheduleTasks() {
         Bukkit.getScheduler().runTaskTimer(this, () -> {
-            for (Player player : FapManager.getFappers().keySet()) {
+            for (UUID uuid : FapManager.getFappers()) {
+                Player player = Bukkit.getPlayer(uuid);
                 if (player == null || !player.isOnline()) continue;
                 if (FapManager.getCount(player) == -1) continue;
                 player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 200, 4));
