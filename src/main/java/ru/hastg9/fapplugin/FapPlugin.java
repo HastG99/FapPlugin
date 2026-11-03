@@ -13,6 +13,7 @@ import ru.hastg9.fapplugin.commands.FapCommand;
 import ru.hastg9.fapplugin.commands.PipCommand;
 import ru.hastg9.fapplugin.leaderboard.LeaderBoard;
 import ru.hastg9.fapplugin.listeners.PlayerListener;
+import ru.hastg9.fapplugin.listeners.CancelListener;
 import ru.hastg9.fapplugin.managers.FapManager;
 
 import java.util.logging.Logger;
@@ -25,6 +26,7 @@ public final class FapPlugin extends JavaPlugin implements Listener {
     private static FapPlugin instance;
     private static LeaderBoard leaderBoard;
     private PlayerListener playerListener;
+    private CancelListener cancelListener;
     private FileConfiguration settings;
 
     public static final Logger LOGGER = Logger.getLogger(FapPlugin.class.getSimpleName());
@@ -50,6 +52,7 @@ public final class FapPlugin extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         Bukkit.getScheduler().cancelTasks(this);
+        if (cancelListener != null) cancelListener.clear();
         if (playerListener != null) playerListener.clear();
         else FapManager.clear();
         if (leaderBoard != null) leaderBoard.save();
@@ -63,6 +66,8 @@ public final class FapPlugin extends JavaPlugin implements Listener {
     private void registerListeners() {
         playerListener = new PlayerListener();
         Bukkit.getPluginManager().registerEvents(playerListener, this);
+        cancelListener = new CancelListener(playerListener);
+        Bukkit.getPluginManager().registerEvents(cancelListener, this);
     }
 
     private void scheduleTasks() {
@@ -79,6 +84,7 @@ public final class FapPlugin extends JavaPlugin implements Listener {
             }
         }, 100L, 100L);
         Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> leaderBoard.save(), 100L, 800L);
+        Bukkit.getScheduler().runTaskTimer(this, () -> cancelListener.refreshHints(), 20L, 20L);
     }
 
     public static String getMessage(String path) {
@@ -102,6 +108,10 @@ public final class FapPlugin extends JavaPlugin implements Listener {
 
     public static FapPlugin getInstance() {
         return instance;
+    }
+
+    public CancelListener getCancelListener() {
+        return cancelListener;
     }
 
     public static FileConfiguration getConf() {

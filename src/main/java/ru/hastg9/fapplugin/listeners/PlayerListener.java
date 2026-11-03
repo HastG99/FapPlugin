@@ -146,6 +146,10 @@ public class PlayerListener implements Listener {
         }
     }
 
+    public void cancelSession(Player player) {
+        cleanup(player, false);
+    }
+
     private Sound getSoundSafe(String name) {
         String key = FapPlugin.getConf().getString("settings.sounds." + name);
         if (key == null) return Sound.BLOCK_SLIME_BLOCK_FALL;
