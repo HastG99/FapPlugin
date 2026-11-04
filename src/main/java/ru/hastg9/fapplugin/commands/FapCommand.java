@@ -26,9 +26,8 @@ public class FapCommand implements CommandExecutor {
                     return true;
                 }
 
-                FapPlugin.getInstance().reloadConfig();
-
-                sender.sendMessage(FapPlugin.getMessage("messages.reload"));
+                boolean loaded = FapPlugin.getInstance().reloadSettings();
+                sender.sendMessage(FapPlugin.getMessage(loaded ? "messages.reload" : "messages.reload-failed"));
                 return true;
             }
 
@@ -40,7 +39,8 @@ public class FapCommand implements CommandExecutor {
 
                 FapPlugin.getLeaderBoard().printTop(sender, 10);
 
-                BoardEntry entry = FapPlugin.getLeaderBoard().getEntry(sender.getName());
+                BoardEntry entry = sender instanceof Player player
+                        ? FapPlugin.getLeaderBoard().getEntry(player.getUniqueId()) : null;
 
                 if(entry != null) {
                     String time = StringUtils.formatDouble(entry.getTime() / 1000.0);
@@ -61,14 +61,14 @@ public class FapCommand implements CommandExecutor {
             return true;
         }
 
-        Player player = Bukkit.getPlayer(sender.getName());
+        Player player = (Player) sender;
 
         if(FapManager.hasFapper(player)) {
             player.sendMessage(FapPlugin.getMessage("messages.already"));
             return true;
         }
 
-        if(FapManager.hasCooldown(player.getName()) && !player.hasPermission("fap.bypass")) {
+        if(FapManager.hasCooldown(player.getUniqueId()) && !player.hasPermission("fap.bypass")) {
             player.sendMessage(FapPlugin.getMessage("messages.cooldown"));
             return true;
         }
