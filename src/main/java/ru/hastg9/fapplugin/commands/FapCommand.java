@@ -78,6 +78,7 @@ public class FapCommand implements CommandExecutor {
         bossBar.addPlayer(player);
 
         FapManager.addFapper(player, bossBar);
+        FapPlugin.getInstance().getCancelListener().start(player);
 
         player.sendMessage(FapPlugin.getMessage("messages.started"));
         player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 200, 4));

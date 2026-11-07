@@ -3,6 +3,10 @@
 
 Does he need an explanation? <br/>
 
+During `/fap`, press your jump key twice within one second to stop. Holding it does not count.
+The hint above the hotbar uses `messages.cancel-hint` from the config. `{key}` shows the player's jump binding, usually Space.
+Cancelling does not save a record or start a cooldown.
+
 # Commands & Permissions
 
 |    COMMAND    |       DESCRIPTION        |  PERMISSION  |
